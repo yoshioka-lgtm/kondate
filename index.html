@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>きょうの献立（試作）</title>
+<style>
+:root{
+  --bg:#f6f1e7; --card:#fffdf8; --ink:#2b2a27; --sub:#777063; --line:#e3dac8;
+  --accent:#c2533b; --accent-ink:#fff; --ok:#4a7a57; --ok-bg:#e6f0e6;
+  --warn:#a8650a; --warn-bg:#fbeed3; --chip:#efe8d9;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;font-size:16px;line-height:1.6}
+#app{max-width:520px;margin:0 auto;padding:16px 16px 96px}
+header{padding:8px 2px 12px}
+header .date{font-size:13px;color:var(--sub)}
+header h1{font-size:24px;margin:2px 0 0;letter-spacing:.02em}
+.proto{display:inline-block;font-size:11px;color:var(--sub);border:1px solid var(--line);border-radius:4px;padding:0 6px;margin-left:8px;vertical-align:middle;font-weight:400}
+.filters{margin:4px 0 14px}
+.frow{display:flex;gap:8px;overflow-x:auto;padding:4px 0;scrollbar-width:none}
+.frow::-webkit-scrollbar{display:none}
+.flabel{flex:none;font-size:12px;color:var(--sub);width:36px;padding-top:9px}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+.chip{flex:none;min-height:40px;padding:6px 14px;border-radius:20px;background:var(--chip);font-size:14px;white-space:nowrap}
+.chip.on{background:var(--ink);color:#fff}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.card .no{font-size:12px;color:var(--sub);letter-spacing:.1em}
+.dishes{margin:6px 0 10px}
+.dish{display:flex;align-items:baseline;gap:8px;padding:3px 0}
+.dish .emo{flex:none;width:26px;font-size:20px}
+.dish .kind{flex:none;font-size:11px;color:var(--sub);width:30px}
+.dish .nm{font-size:17px;font-weight:600}
+.dish.main .nm{font-size:20px}
+.meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.tag{font-size:13px;padding:3px 10px;border-radius:6px;background:var(--chip)}
+.tag.ok{background:var(--ok-bg);color:var(--ok)}
+.tag.buy{background:var(--warn-bg);color:var(--warn)}
+.actions{display:flex;gap:8px}
+.btn{flex:1;min-height:48px;border-radius:10px;font-size:15px;font-weight:600;border:1px solid var(--line);background:#fff}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.detail{border-top:1px dashed var(--line);margin-top:14px;padding-top:12px}
+.detail h3{font-size:15px;margin:14px 0 4px}
+.detail h3:first-child{margin-top:0}
+.detail h3 small{font-weight:400;color:var(--sub);margin-left:6px}
+.ings{list-style:none;margin:0;padding:0}
+.ings li{display:flex;justify-content:space-between;gap:8px;font-size:14px;padding:3px 0;border-bottom:1px solid #f0e9da}
+.ings .st{flex:none;width:22px}
+.ings .q{color:var(--sub);flex:none}
+.ings .n{flex:1}
+.ings li.miss .n{color:var(--warn);font-weight:600}
+ol.steps{margin:6px 0 0;padding-left:22px;font-size:14px}
+ol.steps li{margin-bottom:4px}
+.again{width:100%;min-height:52px;border-radius:12px;border:1.5px solid var(--ink);font-weight:600;font-size:16px;background:transparent}
+.empty{text-align:center;color:var(--sub);padding:28px 12px}
+.hint{font-size:13px;color:var(--sub);margin:0 2px 12px}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--sub);margin:4px 0 6px}
+.legend span b{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.cat h2{font-size:15px;margin:18px 2px 8px}
+.cat h2 small{font-weight:400;color:var(--sub);margin-left:6px;font-size:12px}
+.grid{display:flex;flex-wrap:wrap;gap:8px}
+.item{min-height:44px;padding:8px 14px;border-radius:10px;background:#fff;border:1.5px solid var(--line);font-size:15px;color:var(--sub)}
+.item.have{background:var(--ok-bg);border-color:var(--ok);color:var(--ink);font-weight:600}
+.item.urgent{background:var(--warn-bg);border-color:var(--warn);color:var(--ink);font-weight:600}
+.item.urgent::after{content:" ⏰"}
+details.cat summary{font-size:15px;font-weight:700;margin:18px 2px 8px;cursor:pointer}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav .in{max-width:520px;margin:0 auto;display:flex}
+nav button{flex:1;min-height:60px;font-size:12px;color:var(--sub);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+nav button .i{font-size:20px}
+nav button.on{color:var(--accent);font-weight:700}
+nav button:disabled{opacity:.4}
+.sheet{position:fixed;inset:0;background:rgba(30,25,15,.45);display:flex;align-items:flex-end;justify-content:center;z-index:10}
+.sheet .box{background:var(--card);width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:22px 20px calc(20px + env(safe-area-inset-bottom));max-height:85vh;overflow:auto}
+.sheet h2{margin:0 0 8px;font-size:20px}
+.sheet ul{margin:6px 0 14px;padding-left:20px}
+.sheet .note{font-size:12px;color:var(--sub);margin:10px 0 14px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<nav><div class="in">
+  <button data-tab="today"><span class="i">🍚</span>きょう</button>
+  <button data-tab="fridge"><span class="i">🧊</span>冷蔵庫</button>
+  <button disabled><span class="i">🛒</span>買い物<br>（準備中）</button>
+  <button disabled><span class="i">📖</span>きろく<br>（準備中）</button>
+</div></nav>
+<div id="sheet"></div>
+
+<script>
+// ===== 食材（名前・分類・常備品か） =====
+const CATS=['野菜','肉・魚','卵・豆腐','乾物・缶詰','調味料'];
+const ING={
+ daikon:['大根','野菜'],ninjin:['にんじん','野菜'],tamanegi:['玉ねぎ','野菜'],negi:['長ねぎ','野菜'],
+ kyabetsu:['キャベツ','野菜'],hakusai:['白菜','野菜'],horenso:['ほうれん草','野菜'],komatsuna:['小松菜','野菜'],
+ nasu:['なす','野菜'],kyuri:['きゅうり','野菜'],piman:['ピーマン','野菜'],moyashi:['もやし','野菜'],
+ kabocha:['かぼちゃ','野菜'],jagaimo:['じゃがいも','野菜'],shimeji:['しめじ','野菜'],shoga:['しょうが','野菜'],
+ sake:['生鮭','肉・魚'],saba:['さば','肉・魚'],buri:['ぶり','肉・魚'],torimomo:['鶏もも肉','肉・魚'],
+ torimune:['鶏むね肉','肉・魚'],butakoma:['豚こま肉','肉・魚'],butabara:['豚バラ薄切り','肉・魚'],hikiniku:['鶏ひき肉','肉・魚'],
+ tamago:['卵','卵・豆腐'],tofu:['豆腐','卵・豆腐'],aburaage:['油揚げ','卵・豆腐'],atsuage:['厚揚げ','卵・豆腐'],natto:['納豆','卵・豆腐'],
+ wakame:['乾燥わかめ','乾物・缶詰'],katsuo:['かつお節','乾物・缶詰'],goma:['ごま','乾物・缶詰'],tsuna:['ツナ缶','乾物・缶詰'],
+ shoyu:['しょうゆ','調味料',1],miso:['みそ','調味料',1],mirin:['みりん','調味料',1],ryorishu:['料理酒','調味料',1],
+ sato:['砂糖','調味料',1],shio:['塩','調味料',1],su:['酢','調味料',1],dashi:['顆粒だし','調味料',1],
+ gomaabura:['ごま油','調味料',1],abura:['サラダ油','調味料',1],katakuriko:['片栗粉','調味料',1]
+};
+// ===== レシピ（2人分）。試作用の少数。手順は自作の文 =====
+const R=[
+ {id:'m1',type:'主菜',name:'鮭の塩焼き',emo:'🐟',time:12,main:'魚',tired:1,
+  ing:[['sake','2切れ'],['shio','少々'],['daikon','5cm（おろし用・なくても可）',1]],
+  steps:['鮭の両面に塩をふり、5分おいて出た水気をふき取る。','魚焼きグリルの中火で7〜8分、焼き色がつくまで焼く。','大根があればすりおろして添える。']},
+ {id:'m2',type:'主菜',name:'さばの味噌煮',emo:'🐟',time:15,main:'魚',
+  ing:[['saba','2切れ'],['shoga','1かけ'],['miso','大さじ2'],['sato','大さじ1'],['mirin','大さじ1'],['ryorishu','大さじ2']],
+  steps:['さばの皮に切り目を入れる。しょうがは薄切りにする。','フライパンに水150ml・料理酒・砂糖・みりん・しょうがを入れて煮立てる。','さばを皮を上にして入れ、ふたをして中火で5分煮る。','みそを煮汁で溶いて加え、煮汁をかけながら4〜5分煮つめる。']},
+ {id:'m3',type:'主菜',name:'ぶりの照り焼き',emo:'🐟',time:12,main:'魚',
+  ing:[['buri','2切れ'],['shoyu','大さじ1と1/2'],['mirin','大さじ1と1/2'],['ryorishu','大さじ1'],['abura','小さじ1']],
+  steps:['ぶりの水気をふき取る。','フライパンに油を熱し、中火で両面を3分ずつ焼く。','出た脂をふき取り、しょうゆ・みりん・料理酒を加えて、からめながら1〜2分煮つめる。']},
+ {id:'m4',type:'主菜',name:'鶏の照り焼き',emo:'🍗',time:15,main:'肉',
+  ing:[['torimomo','1枚'],['shoyu','大さじ1と1/2'],['mirin','大さじ1と1/2'],['ryorishu','大さじ1']],
+  steps:['鶏肉は厚い所に切り目を入れて開く。','フライパンに皮を下にして入れ、中火で5分、こんがり焼く。','裏返してふたをし、弱めの中火で4分蒸し焼きにする。','脂をふき取り、調味料を加えてからめる。食べやすく切る。']},
+ {id:'m5',type:'主菜',name:'豚のしょうが焼き',emo:'🥩',time:10,main:'肉',
+  ing:[['butakoma','200g'],['tamanegi','1/2個'],['shoga','1かけ'],['shoyu','大さじ1と1/2'],['mirin','大さじ1'],['ryorishu','大さじ1'],['abura','小さじ1']],
+  steps:['玉ねぎは薄切り、しょうがはすりおろす。','フライパンに油を熱し、玉ねぎと豚肉を中火で炒める。','肉の色が変わったら、しょうがと調味料を加えて全体にからめる。']},
+ {id:'m6',type:'主菜',name:'豚バラと白菜のレンジ蒸し',emo:'🥬',time:10,main:'肉',tired:1,
+  ing:[['butabara','150g'],['hakusai','1/8個'],['ryorishu','大さじ1'],['shoyu','大さじ1'],['su','大さじ1']],
+  steps:['白菜はざく切り、豚肉は5cm幅に切る。','耐熱皿に白菜と豚肉を交互に重ね、料理酒をふる。','ふんわりラップをして600Wで6分。肉に赤い所が残っていれば1分ずつ追加する。','しょうゆと酢を合わせたたれをかける。']},
+ {id:'m7',type:'主菜',name:'鶏むねのねぎ塩レンジ蒸し',emo:'🍗',time:10,main:'肉',tired:1,
+  ing:[['torimune','1枚'],['negi','1/2本'],['ryorishu','大さじ1'],['shio','小さじ1/3'],['gomaabura','小さじ2']],
+  steps:['鶏肉はフォークで全体を刺し、耐熱皿にのせて料理酒をふる。','ふんわりラップをして600Wで3分、裏返してさらに2分。そのまま3分おいて余熱で火を通す。','長ねぎをみじん切りにし、塩・ごま油と混ぜる。','鶏肉を薄く切り（中まで白くなっているか確認）、ねぎ塩だれをかける。']},
+ {id:'m8',type:'主菜',name:'肉豆腐',emo:'🍲',time:15,main:'肉',
+  ing:[['butakoma','150g'],['tofu','1丁'],['negi','1本'],['shoyu','大さじ2'],['mirin','大さじ2'],['sato','大さじ1/2'],['dashi','小さじ1/2']],
+  steps:['豆腐は6等分、長ねぎは斜め切りにする。','鍋に水200mlと調味料を入れて煮立て、豚肉をほぐし入れる。','あくを取り、豆腐と長ねぎを加えて中火で7〜8分煮る。']},
+ {id:'m9',type:'主菜',name:'厚揚げと小松菜の煮びたし',emo:'🥬',time:10,main:'豆腐・卵',tired:1,
+  ing:[['atsuage','1枚'],['komatsuna','1/2束'],['dashi','小さじ1/2'],['shoyu','大さじ1'],['mirin','大さじ1']],
+  steps:['厚揚げは一口大、小松菜は4cmに切る。','鍋に水150mlと調味料を入れて煮立て、厚揚げを入れて3分煮る。','小松菜を加え、しんなりするまで2分煮る。']},
+ {id:'m10',type:'主菜',name:'豆腐の鶏そぼろあん',emo:'🍲',time:15,main:'豆腐・卵',
+  ing:[['tofu','1丁'],['hikiniku','100g'],['shoga','1かけ'],['shoyu','大さじ1と1/2'],['mirin','大さじ1'],['dashi','小さじ1/2'],['katakuriko','小さじ2']],
+  steps:['豆腐は4等分にする。しょうがはすりおろす。','鍋にひき肉と調味料・水150mlを入れ、混ぜてから火にかける。','煮立ったら豆腐を入れて5分煮る。','片栗粉を同量の水で溶いて回し入れ、とろみをつけてしょうがをのせる。']},
+ {id:'m11',type:'主菜',name:'なすとピーマンの味噌炒め',emo:'🍆',time:12,main:'野菜',
+  ing:[['nasu','2本'],['piman','2個'],['miso','大さじ1と1/2'],['sato','大さじ1'],['mirin','大さじ1'],['abura','大さじ1']],
+  steps:['なすとピーマンは一口大の乱切りにする。','みそ・砂糖・みりんを混ぜておく。','フライパンに油を熱し、なすを中火で3分、ピーマンを加えて2分炒める。','合わせた調味料を加えて全体にからめる。']},
+ {id:'m12',type:'主菜',name:'ツナと卵のふんわり炒め',emo:'🍳',time:8,main:'豆腐・卵',tired:1,
+  ing:[['tamago','3個'],['tsuna','1缶'],['negi','1/3本'],['shoyu','小さじ1'],['abura','小さじ2']],
+  steps:['長ねぎは小口切りにする。卵を溶き、汁気を切ったツナ・ねぎ・しょうゆを混ぜる。','フライパンに油を熱し、卵液を流して大きく混ぜる。','半熟より少し固まった所で火を止める。']},
+
+ {id:'s1',type:'副菜',name:'ほうれん草のおひたし',emo:'🥬',time:5,
+  ing:[['horenso','1/2束'],['katsuo','1袋'],['shoyu','小さじ2']],
+  steps:['ほうれん草を熱湯で1分ゆで、水にとって絞る。','4cmに切り、しょうゆとかつお節をかける。']},
+ {id:'s2',type:'副菜',name:'きゅうりとわかめの酢の物',emo:'🥒',time:5,
+  ing:[['kyuri','1本'],['wakame','大さじ1'],['su','大さじ1と1/2'],['sato','小さじ2'],['shio','少々']],
+  steps:['わかめは水で戻す。きゅうりは薄切りにして塩をふり、しんなりしたら絞る。','酢と砂糖を混ぜ、きゅうりとわかめをあえる。']},
+ {id:'s3',type:'副菜',name:'冷ややっこ',emo:'⬜',time:2,
+  ing:[['tofu','1/2丁'],['katsuo','1袋'],['shoyu','適量'],['negi','少々（なくても可）',1]],
+  steps:['豆腐を切って器に盛り、かつお節としょうゆをかける。']},
+ {id:'s4',type:'副菜',name:'にんじんしりしり',emo:'🥕',time:8,
+  ing:[['ninjin','1本'],['tamago','1個'],['tsuna','1/2缶'],['shoyu','小さじ1'],['gomaabura','小さじ1']],
+  steps:['にんじんを細切りにする。','フライパンにごま油を熱し、にんじんを3分炒める。','ツナとしょうゆを加え、溶き卵を回し入れて混ぜる。']},
+ {id:'s5',type:'副菜',name:'もやしのナムル',emo:'🌱',time:5,
+  ing:[['moyashi','1袋'],['gomaabura','小さじ2'],['shio','小さじ1/3'],['goma','小さじ1']],
+  steps:['もやしを耐熱皿に入れ、ふんわりラップをして600Wで3分。','水気を切り、ごま油・塩・ごまであえる。']},
+ {id:'s6',type:'副菜',name:'かぼちゃのレンジ煮',emo:'🎃',time:8,
+  ing:[['kabocha','1/8個'],['shoyu','小さじ2'],['sato','小さじ2'],['mirin','小さじ2']],
+  steps:['かぼちゃを一口大に切り、耐熱皿に皮を下にして並べる。','調味料と水大さじ2をかけ、ふんわりラップをして600Wで5分。','そのまま2分おいて味をなじませる。']},
+ {id:'s7',type:'副菜',name:'小松菜のごま和え',emo:'🥬',time:5,
+  ing:[['komatsuna','1/2束'],['goma','大さじ1'],['shoyu','小さじ2'],['sato','小さじ1']],
+  steps:['小松菜を熱湯で1分ゆで、水にとって絞り、4cmに切る。','ごま・しょうゆ・砂糖であえる。']},
+ {id:'s8',type:'副菜',name:'納豆',emo:'🫘',time:1,
+  ing:[['natto','2パック']],
+  steps:['よく混ぜて器に盛る。']},
+
+ {id:'p1',type:'汁物',name:'豆腐とわかめの味噌汁',emo:'🥣',time:5,
+  ing:[['tofu','1/4丁'],['wakame','小さじ2'],['miso','大さじ1と1/2'],['dashi','小さじ1/2']],
+  steps:['鍋に水350mlと顆粒だしを入れて沸かす。','さいの目に切った豆腐とわかめを入れ、火を止めてみそを溶く。']},
+ {id:'p2',type:'汁物',name:'大根と油揚げの味噌汁',emo:'🥣',time:8,
+  ing:[['daikon','3cm'],['aburaage','1/2枚'],['miso','大さじ1と1/2'],['dashi','小さじ1/2']],
+  steps:['大根は細切り、油揚げは短冊に切る。','鍋に水350ml・顆粒だし・大根を入れ、やわらかくなるまで5分煮る。','油揚げを加え、火を止めてみそを溶く。']},
+ {id:'p3',type:'汁物',name:'玉ねぎとじゃがいもの味噌汁',emo:'🥣',time:10,
+  ing:[['tamanegi','1/4個'],['jagaimo','1個'],['miso','大さじ1と1/2'],['dashi','小さじ1/2']],
+  steps:['じゃがいもは薄い半月切り、玉ねぎは薄切りにする。','鍋に水350ml・顆粒だしと野菜を入れ、7分煮る。','火を止めてみそを溶く。']},
+ {id:'p4',type:'汁物',name:'かきたま汁',emo:'🥣',time:5,
+  ing:[['tamago','1個'],['dashi','小さじ1'],['shoyu','小さじ1'],['shio','少々'],['katakuriko','小さじ1']],
+  steps:['鍋に水350ml・顆粒だし・しょうゆ・塩を入れて沸かす。','片栗粉を同量の水で溶いて加え、とろみをつける。','溶き卵を細く回し入れ、ふんわり浮いたら火を止める。']},
+ {id:'p5',type:'汁物',name:'しめじと白菜の味噌汁',emo:'🥣',time:6,
+  ing:[['shimeji','1/2パック'],['hakusai','1枚'],['miso','大さじ1と1/2'],['dashi','小さじ1/2']],
+  steps:['白菜は細切り、しめじはほぐす。','鍋に水350ml・顆粒だしと具を入れ、4分煮る。','火を止めてみそを溶く。']}
+];
+const BY={};R.forEach(r=>BY[r.id]=r);
+
+// ===== 保存 =====
+const KEY='kondate_proto_v1';
+let S={stock:{},urgent:{},f:{time:20,main:'',tired:false,home:false},tab:'today'};
+function load(){
+  let ok=false;
+  try{const d=JSON.parse(localStorage.getItem(KEY));if(d&&d.stock){S=Object.assign(S,d);ok=true;}}catch(e){}
+  if(!ok){
+    for(const id in ING)if(ING[id][2])S.stock[id]=true;
+    ['tamago','tofu','tamanegi','ninjin','negi','natto','wakame','katsuo','goma','butakoma','daikon'].forEach(id=>S.stock[id]=true);
+  }
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+
+// ===== 提案の計算 =====
+let seen=[],current=[],openIdx=-1;
+const have=id=>!!S.stock[id];
+const need=r=>r.ing.filter(i=>!i[2]).map(i=>i[0]);           // 省略できる材料は数えない
+const fresh=r=>need(r).filter(id=>!ING[id][2]);               // 常備品をのぞいた材料
+function total(m,s,p){return m.time+Math.ceil((s.time+p.time)/2);} // 並行して作る前提の目安
+function info(c){
+  const ids=[...new Set(c.flatMap(need))];
+  const fr=ids.filter(id=>!ING[id][2]);
+  const miss=ids.filter(id=>!have(id));
+  const haveFr=fr.filter(have).length;
+  return {miss,rate:fr.length?haveFr/fr.length:1,urgent:fr.filter(id=>S.urgent[id]&&have(id)).length};
+}
+function build(){
+  const f=S.f,res=[],usedM=new Set(),usedS=new Set(),usedP=new Set();
+  const mains=R.filter(r=>r.type==='主菜'&&(!f.main||r.main===f.main)&&(!f.tired||r.tired));
+  const sides=R.filter(r=>r.type==='副菜'&&(!f.tired||r.time<=5));
+  const soups=R.filter(r=>r.type==='汁物'&&(!f.tired||r.time<=6));
+  for(let n=0;n<3;n++){
+    let best=null;
+    for(const m of mains){
+      if(usedM.has(m.id))continue;
+      const fm=fresh(m);
+      for(const s of sides){
+        const fs=fresh(s); if(fs.some(x=>fm.includes(x)))continue;   // 同じ食材が重ならないように
+        for(const p of soups){
+          const fp=fresh(p); if(fp.some(x=>fm.includes(x)||fs.includes(x)))continue;
+          const t=total(m,s,p); if(t>f.time)continue;
+          const c=[m,s,p],i=info(c);
+          if(f.home&&i.miss.length)continue;
+          let sc=i.rate*100+i.urgent*25+Math.random()*30;
+          if(seen.includes(m.id))sc-=150;
+          if(usedS.has(s.id))sc-=50;
+          if(usedP.has(p.id))sc-=30;
+          if(!best||sc>best.sc)best={sc,c,t,i};
+        }
+      }
+    }
+    if(!best)break;
+    res.push(best);usedM.add(best.c[0].id);usedS.add(best.c[1].id);usedP.add(best.c[2].id);
+  }
+  res.forEach(r=>{if(!seen.includes(r.c[0].id))seen.push(r.c[0].id);});
+  if(seen.length>=mains.length)seen=res.map(r=>r.c[0].id);
+  current=res;openIdx=-1;
+}
+
+// ===== 表示 =====
+const $=s=>document.querySelector(s);
+const app=$('#app');
+function chip(label,on,act){return `<button class="chip${on?' on':''}" data-act="${act}">${label}</button>`;}
+function renderToday(){
+  const d=new Date(),w='日月火水木金土'[d.getDay()],f=S.f;
+  let h=`<header><div class="date">${d.getMonth()+1}月${d.getDate()}日（${w}）</div><h1>今夜の献立<span class="proto">試作</span></h1></header>`;
+  h+=`<div class="filters">
+   <div class="frow"><span class="flabel">時間</span>${[15,20,25].map(t=>chip(t+'分以内',f.time===t,'time:'+t)).join('')}</div>
+   <div class="frow"><span class="flabel">主役</span>${chip('おまかせ',!f.main,'main:')}${['魚','肉','豆腐・卵','野菜'].map(m=>chip(m,f.main===m,'main:'+m)).join('')}</div>
+   <div class="frow"><span class="flabel">気分</span>${chip('😮‍💨 疲れた日',f.tired,'tired')}${chip('🏠 家にある物だけ',f.home,'home')}</div>
+  </div>`;
+  if(!current.length){
+    h+=`<div class="card empty">この条件に合う献立がありません。<br>時間をのばすか、条件を1つ外してみてください。</div>`;
+  }
+  current.forEach((r,i)=>{
+    const [m,s,p]=r.c,miss=r.i.miss;
+    h+=`<div class="card"><div class="no">案 ${i+1}</div>
+     <div class="dishes">
+      <div class="dish main"><span class="emo">${m.emo}</span><span class="kind">主菜</span><span class="nm">${m.name}</span></div>
+      <div class="dish"><span class="emo">${s.emo}</span><span class="kind">副菜</span><span class="nm">${s.name}</span></div>
+      <div class="dish"><span class="emo">${p.emo}</span><span class="kind">汁物</span><span class="nm">${p.name}</span></div>
+     </div>
+     <div class="meta"><span class="tag">⏱ 約${r.t}分</span>
+      ${miss.length?`<span class="tag buy">🛒 買い足し ${miss.length}品</span>`:`<span class="tag ok">✓ 家にある物で作れる</span>`}
+      <span class="tag">家の材料 ${Math.round(r.i.rate*100)}%</span></div>
+     ${miss.length?`<p class="hint" style="margin:-4px 0 12px">買う物：${miss.map(id=>ING[id][0]).join('・')}</p>`:''}
+     <div class="actions"><button class="btn" data-act="open:${i}">${openIdx===i?'とじる':'材料と作り方'}</button><button class="btn primary" data-act="pick:${i}">これにする</button></div>
+     ${openIdx===i?detail(r):''}
+    </div>`;
+  });
+  h+=`<button class="again" data-act="again">🔄 別の案を見る</button>`;
+  app.innerHTML=h;
+}
+function detail(r){
+  let h='<div class="detail">';
+  r.c.forEach(x=>{
+    h+=`<h3>${x.emo} ${x.name}<small>${x.time}分・2人分</small></h3><ul class="ings">`;
+    x.ing.forEach(([id,q,opt])=>{
+      const ok=have(id);
+      h+=`<li class="${ok||opt?'':'miss'}"><span class="st">${ok?'✓':(opt?'－':'🛒')}</span><span class="n">${ING[id][0]}</span><span class="q">${q}</span></li>`;
+    });
+    h+=`</ul><ol class="steps">${x.steps.map(s=>`<li>${s}</li>`).join('')}</ol>`;
+  });
+  return h+'</div>';
+}
+function renderFridge(){
+  let h=`<header><div class="date">家にある物を押してください</div><h1>冷蔵庫<span class="proto">試作</span></h1></header>
+  <p class="hint">押すたびに「ない → ある → 早く使いたい → ない」と切り替わります。「早く使いたい」を付けた食材は、献立の提案で優先されます。</p>
+  <div class="legend"><span><b style="background:#fff;border:1.5px solid var(--line)"></b>ない</span><span><b style="background:var(--ok-bg);border:1.5px solid var(--ok)"></b>ある</span><span><b style="background:var(--warn-bg);border:1.5px solid var(--warn)"></b>早く使いたい ⏰</span></div>`;
+  CATS.forEach(cat=>{
+    const ids=Object.keys(ING).filter(id=>ING[id][1]===cat);
+    const n=ids.filter(have).length;
+    const grid=`<div class="grid">${ids.map(id=>`<button class="item${have(id)?(S.urgent[id]?' urgent':' have'):''}" data-act="ing:${id}">${ING[id][0]}</button>`).join('')}</div>`;
+    if(cat==='調味料')h+=`<details class="cat"><summary>調味料（いつもある物）　${n}/${ids.length}</summary>${grid}</details>`;
+    else h+=`<div class="cat"><h2>${cat}<small>${n}品ある</small></h2>${grid}</div>`;
+  });
+  app.innerHTML=h;
+}
+function render(){
+  document.querySelectorAll('nav button[data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===S.tab));
+  S.tab==='today'?renderToday():renderFridge();
+}
+function showSheet(r){
+  const miss=r.i.miss;
+  $('#sheet').innerHTML=`<div class="sheet" data-act="close"><div class="box">
+   <h2>今夜はこれに決まり 🎉</h2>
+   <ul>${r.c.map(x=>`<li>${x.name}</li>`).join('')}</ul>
+   ${miss.length?`<b>🛒 買い足す物</b><ul>${miss.map(id=>`<li>${ING[id][0]}</li>`).join('')}</ul>`:`<p><b>✓ 買い物なしで作れます</b></p>`}
+   <p class="note">※試作のため、ここから先（買い物リストへの追加・作った記録）はまだ動きません。</p>
+   <button class="btn primary" style="width:100%" data-act="close">とじる</button>
+  </div></div>`;
+}
+
+// ===== 操作 =====
+document.addEventListener('click',e=>{
+  const tab=e.target.closest('[data-tab]');
+  if(tab){S.tab=tab.dataset.tab;if(S.tab==='today')build();save();render();window.scrollTo(0,0);return;}
+  const el=e.target.closest('[data-act]');if(!el)return;
+  const [a,v]=el.dataset.act.split(':');
+  if(a==='close'){if(e.target===el)$('#sheet').innerHTML='';return;}
+  if(a==='time'){S.f.time=+v;seen=[];build();}
+  else if(a==='main'){S.f.main=v||'';seen=[];build();}
+  else if(a==='tired'){S.f.tired=!S.f.tired;seen=[];build();}
+  else if(a==='home'){S.f.home=!S.f.home;seen=[];build();}
+  else if(a==='again'){build();window.scrollTo({top:0,behavior:'smooth'});}
+  else if(a==='open'){openIdx=openIdx===+v?-1:+v;}
+  else if(a==='pick'){showSheet(current[+v]);return;}
+  else if(a==='ing'){
+    if(!have(v)){S.stock[v]=true;delete S.urgent[v];}
+    else if(!S.urgent[v]){S.urgent[v]=true;}
+    else{delete S.stock[v];delete S.urgent[v];}
+  }
+  save();render();
+});
+load();build();render();
+</script>
+</body>
+</html>
