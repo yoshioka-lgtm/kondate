@@ -365,19 +365,22 @@ Object.assign(ING,{
  kome:['米','乾物・缶詰'],nori:['のり','乾物・缶詰'],somen:['そうめん','乾物・缶詰'],pasta:['パスタ','乾物・缶詰'],
  mayo:['マヨネーズ','調味料',1],ketchup:['ケチャップ','調味料',1],mentsuyu:['めんつゆ','調味料',1],kosho:['こしょう','調味料',1],
  ponzu:['ポン酢','調味料'],shirodashi:['白だし','調味料'],shichimi:['七味','調味料'],wasabi:['わさび','調味料'],karashi:['からし','調味料'],
- shogatube:['おろししょうが（チューブ）','調味料'],ninnikutube:['おろしにんにく（チューブ）','調味料']
+ shogatube:['おろししょうが（チューブ）','調味料'],ninnikutube:['おろしにんにく（チューブ）','調味料'],
+ toilet:['トイレットペーパー','日用品'],tissue:['ティッシュ','日用品'],kitchenpaper:['キッチンペーパー','日用品'],wrap:['ラップ','日用品'],alumi:['アルミホイル','日用品'],
+ gomibukuro:['ごみ袋','日用品'],hozonbukuro:['保存袋','日用品'],sponge:['スポンジ','日用品'],shokkisenzai:['食器用洗剤','日用品'],sentakusenzai:['洗濯洗剤','日用品'],
+ junanzai:['柔軟剤','日用品'],handsoap:['ハンドソープ','日用品'],shampoo:['シャンプー','日用品'],bodysoap:['ボディソープ','日用品'],hamigakiko:['歯みがき粉','日用品']
 });
 const YOMI={daikon:'だいこん',tamanegi:'たまねぎ',negi:'ながねぎ',hakusai:'はくさい',horenso:'ほうれんそう',komatsuna:'こまつな',
  sake:'なまさけ しゃけ',torimomo:'とりももにく',torimune:'とりむねにく',butakoma:'ぶたこまにく',butabara:'ぶたばらうすぎり',hikiniku:'とりひきにく',
  tamago:'たまご',tofu:'とうふ',aburaage:'あぶらあげ',atsuage:'あつあげ',natto:'なっとう',wakame:'かんそうわかめ',katsuo:'かつおぶし',tsuna:'つなかん',
  ryorishu:'りょうりしゅ',sato:'さとう',shio:'しお',su:'す',dashi:'かりゅうだし',gomaabura:'ごまあぶら',abura:'さらだあぶら',katakuriko:'かたくりこ',
  oba:'おおば しそ',konegi:'こねぎ',gyunyu:'ぎゅうにゅう',umeboshi:'うめぼし',kome:'こめ',shirodashi:'しろだし',shichimi:'しちみ',
- ponzu:'ぽんず',shogatube:'しょうが',ninnikutube:'にんにく'};
-const PLACES=['冷蔵室','野菜室','冷凍庫','調味料','乾物の棚'];
-const DEFP={'野菜':'野菜室','肉・魚':'冷蔵室','卵・豆腐':'冷蔵室','乾物・缶詰':'乾物の棚','調味料':'調味料','その他':'冷蔵室'};
+ ponzu:'ぽんず',toilet:'といれっとぺーぱー',tissue:'てぃっしゅ',kitchenpaper:'きっちんぺーぱー',wrap:'らっぷ',alumi:'あるみほいる',gomibukuro:'ごみぶくろ',hozonbukuro:'ほぞんぶくろ じっぷろっく',sponge:'すぽんじ',shokkisenzai:'しょっきようせんざい',sentakusenzai:'せんたくせんざい',junanzai:'じゅうなんざい',handsoap:'はんどそーぷ',shampoo:'しゃんぷー',bodysoap:'ぼでぃそーぷ',hamigakiko:'はみがきこ',shogatube:'しょうが',ninnikutube:'にんにく'};
+const PLACES=['冷蔵室','野菜室','冷凍庫','調味料','乾物の棚','日用品'];
+const DEFP={'野菜':'野菜室','肉・魚':'冷蔵室','卵・豆腐':'冷蔵室','乾物・缶詰':'乾物の棚','調味料':'調味料','その他':'冷蔵室','日用品':'日用品'};
 const OLD=14*864e5;   // 2週間確かめていない物に「要確認」を出す
 function init2(){
-  S.low=S.low||{};S.seen=S.seen||{};S.place=S.place||{};S.custom=S.custom||[];S.openP=S.openP||{'冷蔵室':true};S.q='';
+  S.low=S.low||{};S.out=S.out||{};S.seen=S.seen||{};S.place=S.place||{};S.custom=S.custom||[];S.openP=S.openP||{'冷蔵室':true};S.q='';
   S.custom.forEach(c=>{ING[c.id]=[c.name,'その他'];});
   Object.keys(S.stock).forEach(id=>{if(!ING[id])delete S.stock[id];else if(!S.seen[id])S.seen[id]=Date.now();});
 }
@@ -424,8 +427,9 @@ function showItem(id){
    <div class="rows">
     <button class="srow" data-act="st:${id}:have">ある<small>確かめた日が今日になります</small></button>
     <button class="srow" data-act="st:${id}:low">残り少ない<small>買い物リストに入ります</small></button>
-    <button class="srow" data-act="st:${id}:none">なくなった<small>一覧から消えます</small></button>
-    ${p==='調味料'||p==='乾物の棚'?'':`<button class="srow" data-act="frz:${id}">${p==='冷凍庫'?'冷凍庫から出した':'冷凍庫に入れた'}</button>`}
+    <button class="srow" data-act="st:${id}:none">なくなった<small>一覧から消え、買い物リストに入ります</small></button>
+    ${S.out[id]?`<button class="srow" data-act="st:${id}:drop">買い物リストから外す<small>もう買わない物</small></button>`:''}
+    ${p==='調味料'||p==='乾物の棚'||p==='日用品'?'':`<button class="srow" data-act="frz:${id}">${p==='冷凍庫'?'冷凍庫から出した':'冷凍庫に入れた'}</button>`}
    </div>
    <button class="go wide" data-act="close">とじる</button></div></div>`;
 }
@@ -444,17 +448,18 @@ function fridgeAct(a,v,v2){
   else if(a==='item'){showItem(v);return false;}
   else if(a==='addp'){showAdd(v);return false;}
   else if(a==='st'){
-    if(v2==='none'){delete S.stock[v];delete S.low[v];delete S.place[v];}
-    else{S.stock[v]=true;S.seen[v]=now;if(v2==='low')S.low[v]=true;else delete S.low[v];}
+    if(v2==='none'){delete S.stock[v];delete S.low[v];delete S.place[v];S.out[v]=true;}
+    else if(v2==='drop'){delete S.out[v];}
+    else{delete S.out[v];S.stock[v]=true;S.seen[v]=now;if(v2==='low')S.low[v]=true;else delete S.low[v];}
     $('#sheet').innerHTML='';
   }
   else if(a==='frz'){
     if(place(v)==='冷凍庫')delete S.place[v];else S.place[v]='冷凍庫';
-    S.stock[v]=true;S.seen[v]=now;$('#sheet').innerHTML='';
+    delete S.out[v];S.stock[v]=true;S.seen[v]=now;$('#sheet').innerHTML='';
   }
   else if(a==='add'){
     if(have(v)&&place(v)===v2){delete S.stock[v];delete S.low[v];delete S.place[v];}
-    else{S.stock[v]=true;S.seen[v]=now;if(v2==='冷凍庫')S.place[v]='冷凍庫';else delete S.place[v];}
+    else{delete S.out[v];S.stock[v]=true;S.seen[v]=now;if(v2==='冷凍庫')S.place[v]='冷凍庫';else delete S.place[v];}
     S.openP[v2]=true;showAdd(v2);
   }
   else if(a==='newc'){
@@ -542,16 +547,34 @@ function renderToday(){
    </div></article>`;
   app.innerHTML=h;
 }
+function shopText(off){
+  const list=shopList(off)||[],bk=S.bought[key(weekStart(off))]||{},a=dayDate(off,firstDay(off)),b=dayDate(off,lastDay(off));
+  const inl=new Set(list.map(e=>e.id)),lows=allIds().filter(id=>(S.low[id]||S.out[id])&&!bk[id]&&!inl.has(id));
+  let t='買い物リスト（'+(a.getTime()===b.getTime()?md(a):md(a)+'〜'+md(b))+'の分）\n';
+  if(lows.length)t+='\n【切らした物・残り少ない物】\n'+lows.map(id=>'・'+ING[id][0]).join('\n')+'\n';
+  CATS.forEach(cat=>{
+    const rows=list.filter(e=>!e.done&&ING[e.id][1]===cat);if(!rows.length)return;
+    t+='\n【'+cat+'】\n'+rows.map(e=>'・'+ING[e.id][0]+'　'+e.qty).join('\n')+'\n';
+  });
+  return t;
+}
+function sendList(el,off){
+  const t=shopText(off),say=m=>{el.textContent=m;};
+  if(navigator.share){navigator.share({text:t}).catch(()=>{});return;}
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(()=>say('写しました。メッセージに貼り付けてください'),()=>say('写せませんでした'));return;}
+  say('この端末では送れません');
+}
 function renderShop(){
   const off=S.off,list=shopList(off),a=dayDate(off,firstDay(off)),b=dayDate(off,lastDay(off)),sp=S.span||0;
   let h=head('買い物',a.getTime()===b.getTime()?`<b>${md(a)}</b>の分`:`<b>${md(a)}</b>〜${md(b)}の分`);
   h+=`<section class="cond">${weekSwitch()}<div class="crow"><span class="clabel">何日分</span><div class="opts">${opt('1日分',sp===1,'span:1')}${opt('3日分',sp===3,'span:3')}${opt('残り全部',sp===0,'span:0')}</div></div></section>`;
   if(!list){h+=`<div class="empty">先に一週間の献立を作ってください。</div><button class="go wide" data-act="go:week">献立の画面へ</button>`;app.innerHTML=h;return;}
-  const bk=S.bought[key(weekStart(off))]||{},lows=allIds().filter(id=>S.low[id]||bk[id]==='low');
+  const bk=S.bought[key(weekStart(off))]||{},inl=new Set(list.map(e=>e.id)),lows=allIds().filter(id=>!inl.has(id)&&(S.low[id]||S.out[id]||bk[id]==='low'||bk[id]==='out'));
   if(!list.length&&!lows.length){h+=`<div class="empty">買う物はありません。<br>家にある物で足ります。</div>`;app.innerHTML=h;return;}
   const left=list.filter(e=>!e.done).length+lows.filter(id=>!bk[id]).length;
   h+=`<p class="lead">2人分の量です。押すと「買った」になり、冷蔵庫にも「ある」が付きます。<b class="left">あと${left}品</b></p>`;
-  if(lows.length)h+=`<div class="cat"><h2><span>残り少ない物</span><small>${lows.length}品</small></h2>`+lows.map(id=>`<button class="buyrow${bk[id]?' done':''}" data-act="buy:${id}"><span class="bx"></span><span class="n">${esc(ING[id][0])}</span><span class="q"></span><span class="w">在庫帳</span></button>`).join('')+'</div>';
+  if(left)h+=`<button class="more wide" data-act="send" style="margin-bottom:14px">この買い物リストを家族に送る</button>`;
+  if(lows.length)h+=`<div class="cat"><h2><span>切らした物・残り少ない物</span><small>${lows.length}品</small></h2>`+lows.map(id=>`<button class="buyrow${bk[id]?' done':''}" data-act="buy:${id}"><span class="bx"></span><span class="n">${esc(ING[id][0])}</span><span class="q"></span><span class="w">在庫帳</span></button>`).join('')+'</div>';
   CATS.forEach(cat=>{
     const rows=list.filter(e=>ING[e.id][1]===cat);if(!rows.length)return;
     h+=`<div class="cat"><h2><span>${cat}</span><small>${rows.length}品</small></h2>`;
@@ -602,6 +625,7 @@ document.addEventListener('click',e=>{
     if(days&&!confirm('いまの献立を消して、作り直しますか？'))return;
     makeWeek(off);if(S.tab==='today'){S.tab='week';S.off=0;}
   }
+  else if(a==='send'){sendList(el,off);return;}
   else if(a==='day'){showDay(i);return;}
   else if(a==='view'){S.sel={off:S.off,i};S.tab='today';window.scrollTo(0,0);}
   else if(a==='re'){const d=days[i];if(d.mode==='past')d.mode='cook';d.c=pickDay(days,i,d.mode,d.c&&d.c[0]);shut();}
@@ -610,8 +634,8 @@ document.addEventListener('click',e=>{
   else if(a==='swap'){const j=+v2,t=days[i];days[i]=days[j];days[j]=t;shut();}
   else if(a==='buy'){
     const k=key(weekStart(off)),b=S.bought[k]||(S.bought[k]={});
-    if(b[v]){if(b[v]==='low')S.low[v]=true;else delete S.stock[v];delete b[v];}
-    else{b[v]=S.low[v]?'low':true;S.stock[v]=true;delete S.low[v];S.seen[v]=Date.now();}
+    if(b[v]){if(b[v]==='low')S.low[v]=true;else{delete S.stock[v];if(b[v]==='out')S.out[v]=true;}delete b[v];}
+    else{b[v]=S.out[v]?'out':S.low[v]?'low':true;S.stock[v]=true;delete S.low[v];delete S.out[v];S.seen[v]=Date.now();}
   }
   save();render();
 });
