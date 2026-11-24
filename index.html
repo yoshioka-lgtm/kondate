@@ -112,7 +112,13 @@ nav button:disabled{color:#a9a59d}
 .dd span{display:block;font-size:11px;color:var(--gray);font-family:var(--gothic)}
 .dd i{display:block;font-style:normal;font-family:var(--gothic);font-size:10px;background:var(--shu);color:#fff;margin-top:3px;letter-spacing:.1em}
 .day.today .dd b{color:var(--shu)}
-.day.past{opacity:.4}
+.day.past .dd,.day.past .dbody{opacity:.45}
+.day.past.logged .dd,.day.past.logged .dbody{opacity:.75}
+.sheet .lname{display:flex;gap:8px;margin:0 0 4px}
+.sheet .lname input{flex:1;min-width:0;min-height:48px;border:1px solid var(--ink);padding:0 10px;font-size:16px;font-family:inherit;background:var(--paper);color:var(--ink);border-radius:0}
+.sheet .lname button{flex:none;min-height:48px;padding:0 14px;background:var(--ink);color:var(--paper);font-size:14px}
+.sheet .moved{border-top:1px solid var(--ink);margin-top:16px;padding-top:12px}
+.sheet .moved p{margin:0 0 8px;font-size:14px;line-height:1.6}
 .dbody{flex:1;min-width:0;text-align:left;min-height:48px}
 .dbody:disabled{color:inherit}
 .day h2{font-family:var(--mincho);font-size:17px;text-wrap:balance;font-weight:600;line-height:1.4;margin:0}
@@ -300,7 +306,7 @@ function pickDay(days,i,mode,avoid){
   const mains=R.filter(r=>r.type==='主菜'&&(!tired||r.tired));
   const sides=R.filter(r=>r.type==='副菜'&&(!tired||r.time<=5));
   const soups=R.filter(r=>r.type==='汁物'&&(!tired||r.time<=6));
-  let best=null;
+  let best=null;const rec=recentMains();
   for(const m of mains){const fm=fresh(m);
     for(const s of sides){const fs=fresh(s);if(fs.some(x=>fm.includes(x)))continue;
       for(const p of soups){const fp=fresh(p);if(fp.some(x=>fm.includes(x)||fs.includes(x)))continue;
@@ -309,6 +315,7 @@ function pickDay(days,i,mode,avoid){
         // 家にある物と、同じ週にすでに買う物を使う献立ほど点が高い（使い切り）
         let sc=ids.filter(x=>have(x)||bought.has(x)).length/ids.length*60+Math.random()*40;
         if(usedM[m.id])sc-=300;
+        if(rec[m.id])sc-=60;   // 最近10日に作った主菜は避ける
         if(avoid===m.id)sc-=500;
         near.forEach(n=>{if(!n)return;if(n[0].main===m.main)sc-=45;if(n[1].id===s.id)sc-=40;if(n[2].id===p.id)sc-=40;});
         sc-=(usedS[s.id]||0)*25+(usedP[p.id]||0)*18;
@@ -380,7 +387,7 @@ const PLACES=['冷蔵室','野菜室','冷凍庫','調味料','乾物の棚','�
 const DEFP={'野菜':'野菜室','肉・魚':'冷蔵室','卵・豆腐':'冷蔵室','乾物・缶詰':'乾物の棚','調味料':'調味料','その他':'冷蔵室','日用品':'日用品'};
 const OLD=14*864e5;   // 2週間確かめていない物に「要確認」を出す
 function init2(){
-  S.low=S.low||{};S.out=S.out||{};S.seen=S.seen||{};S.place=S.place||{};S.custom=S.custom||[];S.openP=S.openP||{'冷蔵室':true};S.q='';
+  S.low=S.low||{};S.out=S.out||{};S.log=S.log||{};S.seen=S.seen||{};S.place=S.place||{};S.custom=S.custom||[];S.openP=S.openP||{'冷蔵室':true};S.q='';
   S.custom.forEach(c=>{ING[c.id]=[c.name,'その他'];});
   Object.keys(S.stock).forEach(id=>{if(!ING[id])delete S.stock[id];else if(!S.seen[id])S.seen[id]=Date.now();});
 }
@@ -484,6 +491,55 @@ function buyLine(miss){
    ?`<p class="buy"><span class="lab">買い足し</span><span>${miss.map(id=>ING[id][0]).join('、')}</span></p>`
    :`<p class="buy none"><span class="lab">買い物なし</span><span>家にある物で作れます</span></p>`;
 }
+// ===== 食べた物の記録 =====
+const LOGK={plan:'献立どおり作った',other:'別の物を作った',out:'外食・お惣菜'};
+function logOf(off,i){return (S.log||{})[key(dayDate(off,i))];}
+function recentMains(){
+  const t=Date.now(),r={};
+  Object.entries(S.log||{}).forEach(([k,v])=>{const [y,m,d]=k.split('-');if(v.k==='plan'&&v.c&&t-new Date(y,m-1,d)<10*864e5)r[v.c[0]]=1;});
+  return r;
+}
+function laterDays(i){const days=wk(0);return days.map((x,j)=>j).filter(j=>j>i&&j>=todayIdx()&&days[j].mode!=='skip'&&days[j].c);}
+function showLog(i){
+  const days=wk(0),d=days[i],dt=dayDate(0,i),L=logOf(0,i),c=combo(d),later=laterDays(i);
+  let h=`<div class="sheet" data-act="close"><div class="box">
+   <div class="k">${md(dt)}・${WD[dt.getDay()]}曜日${L?'・いまの記録は「'+LOGK[L.k]+'」':''}</div>
+   <h2>食べた物を記録する</h2><div class="rows">`;
+  if(c)h+=`<button class="srow" data-act="log:${i}:plan">献立どおり作った<small>${c[0].name}・${c[1].name}・${c[2].name}</small></button>`;
+  h+=`<button class="srow" data-act="log:${i}:out">外食・お惣菜</button></div>
+   <div class="k" style="margin-top:16px">別の物を作った</div>
+   <div class="lname"><input id="lname" type="text" maxlength="30" placeholder="料理の名前（例：カレー）" value="${L&&L.k==='other'?esc(L.name):''}" autocomplete="off"><button data-act="log:${i}:other">記録する</button></div>`;
+  if(L&&L.k!=='plan'&&c&&!d.moved&&later.length){
+    const last=combo(days[later[later.length-1]]);
+    h+=`<div class="moved"><p>予定していた「${c[0].name}」は、まだ作っていません。買った材料を使うなら、先の日へ回せます。</p>
+     <button class="srow" data-act="shift:${i}">残りの献立を1日ずつ後ろへずらす<small>${WD[dayDate(0,later[later.length-1]).getDay()]}曜の「${last[0].name}」は献立から外れます</small></button></div>`;
+  }
+  if(d.moved)h+=`<p class="note" style="margin-top:12px">この日の献立は、後ろの日へずらしました。</p>`;
+  if(L)h+=`<div class="rows" style="margin-top:16px"><button class="srow" data-act="log:${i}:del">記録を消す</button></div>`;
+  $('#sheet').innerHTML=h+`<button class="go wide" data-act="close">とじる</button></div></div>`;
+}
+function logAct(a,v,v2){
+  const i=+v,days=wk(0);
+  if(a==='logs'){showLog(i);return false;}
+  if(a==='log'){
+    const k=key(dayDate(0,i)),d=days[i];
+    if(v2==='del'){delete S.log[k];$('#sheet').innerHTML='';return true;}
+    if(v2==='other'){
+      const n=($('#lname').value||'').trim();
+      if(!n){$('#lname').focus();$('#lname').placeholder='料理の名前を入れてください';return false;}
+      S.log[k]={k:'other',name:n};
+    }else S.log[k]={k:v2,c:v2==='plan'&&d.c?d.c.slice():null};
+    save();render();
+    if(v2==='plan'||!d.c||d.moved||!laterDays(i).length)$('#sheet').innerHTML='';else showLog(i);
+    return false;
+  }
+  if(a==='shift'){
+    const d=days[i],later=laterDays(i);
+    let carry=d.c;later.forEach(j=>{const t=days[j].c;days[j].c=carry;carry=t;});
+    d.moved=true;$('#sheet').innerHTML='';return true;
+  }
+  return null;
+}
 function renderWeek(){
   const off=S.off,days=wk(off),a=dayDate(off,0),b=dayDate(off,6),ti=off===0?todayIdx():-1;
   let h=head(off?'来週の献立':'今週の献立',`<b>${md(a)}</b>〜${md(b)}`);
@@ -496,15 +552,18 @@ function renderWeek(){
   }
   h+='<div class="days">';
   days.forEach((d,i)=>{
-    const dt=dayDate(off,i),c=combo(d),past=i<ti;
+    const dt=dayDate(off,i),c=combo(d),past=i<ti,L=off===0&&i<=ti?logOf(0,i):null;
     let body;
-    if(c)body=`<h2>${c[0].name}</h2><p class="subline">${d.mode==='tired'?'<span class="mk">疲れた日</span>':''}${c[1].name}・${c[2].name}</p>`;
+    if(L&&L.k==='plan'&&c)body=`<h2>${c[0].name}</h2><p class="subline"><span class="mk">作った</span>${c[1].name}・${c[2].name}</p>`;
+    else if(L&&L.k==='other')body=`<h2>${esc(L.name)}</h2><p class="subline"><span class="mk">別の物</span>${c?'献立は'+c[0].name:''}${d.moved?'（後ろへずらした）':''}</p>`;
+    else if(L&&L.k==='out')body=`<h2>外食・お惣菜</h2><p class="subline"><span class="mk">記録</span>${c?'献立は'+c[0].name:''}${d.moved?'（後ろへずらした）':''}</p>`;
+    else if(c)body=`<h2>${c[0].name}</h2><p class="subline">${d.mode==='tired'?'<span class="mk">疲れた日</span>':''}${c[1].name}・${c[2].name}</p>`;
     else if(d.mode==='skip')body=`<p class="offday">作らない日</p>`;
     else body=`<p class="offday">—</p>`;
-    h+=`<article class="day${i===ti?' today':''}${past?' past':''}">
+    h+=`<article class="day${i===ti?' today':''}${past?' past':''}${L?' logged':''}">
       <div class="dd"><b>${WD[dt.getDay()]}</b><span>${dt.getDate()}日</span>${i===ti?'<i>今日</i>':''}</div>
       <button class="dbody" ${c&&!past?`data-act="view:${i}"`:'disabled'}>${body}</button>
-      ${past?'':`<button class="chg" data-act="day:${i}">変える</button>`}
+      ${past?(off===0?`<button class="chg" data-act="logs:${i}">${L?'記録済':'記録'}</button>`:''):`<button class="chg" data-act="day:${i}">変える</button>`}
     </article>`;
   });
   h+=`</div><button class="go wide" data-act="go:shop">買い物リストを見る</button>
@@ -542,6 +601,7 @@ function renderToday(){
     <h2>${c[0].name}</h2>
     <dl class="sub"><dt>副菜</dt><dd>${c[1].name}</dd><dt>汁物</dt><dd>${c[2].name}</dd></dl>
     ${buyLine(missOf(c))}
+    ${sel.off===0&&i<=todayIdx()?`<button class="more wide" style="margin:0 0 12px" data-act="logs:${i}">${logOf(0,i)?'記録済：'+LOGK[logOf(0,i).k]:'食べた物を記録する'}</button>`:''}
     <div class="actions"><button class="more" data-act="re:${i}">別の献立に変える</button><button class="more" data-act="tired:${i}">${d.mode==='tired'?'ふつうの献立に戻す':'疲れた日の献立に'}</button></div>
     ${detail(c)}
    </div></article>`;
@@ -596,6 +656,7 @@ function showDay(i){
    <div class="k">${md(dt)}</div>
    <h2>${WD[dt.getDay()]}曜日を変える</h2>
    <div class="rows">
+   ${off===0&&i===todayIdx()?`<button class="srow" data-act="logs:${i}">食べた物を記録する<small>${logOf(0,i)?'いまの記録は「'+LOGK[logOf(0,i).k]+'」':'作った・別の物・外食'}</small></button>`:''}
    ${d.mode==='skip'?`<button class="srow" data-act="skip:${i}">作る日に戻す</button>`:`
     <button class="srow" data-act="re:${i}">別の献立に変える</button>
     <button class="srow" data-act="tired:${i}">${d.mode==='tired'?'ふつうの献立に戻す':'疲れた日の献立にする<small>短時間・手間の少ない物</small>'}</button>
@@ -615,6 +676,7 @@ document.addEventListener('click',e=>{
   const [a,v,v2]=el.dataset.act.split(':');
   const shut=()=>{$('#sheet').innerHTML='';};
   if(a==='close'){if(e.target===el)shut();return;}
+  const lg=logAct(a,v,v2);if(lg===false)return;if(lg===true){save();render();return;}
   const fr=fridgeAct(a,v,v2);if(fr===false)return;if(fr===true){save();render();return;}
   const off=S.tab==='today'?(S.sel?S.sel.off:0):S.off,days=wk(off),i=+v;
   if(a==='off'){S.off=i;}
